@@ -8,6 +8,7 @@ package talib
 
 import (
 	"errors"
+	"github.com/shopspring/decimal"
 	"math"
 )
 
@@ -3050,26 +3051,74 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 }
 
 // StochRsi - Stochastic Relative Strength Index
-func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
-
-	outFastK := make([]float64, len(inReal))
-	outFastD := make([]float64, len(inReal))
-
-	lookbackSTOCHF := (inFastKPeriod - 1) + (inFastDPeriod - 1)
-	lookbackTotal := inTimePeriod + lookbackSTOCHF
-	startIdx := lookbackTotal
-	tempRSIBuffer := Rsi(inReal, inTimePeriod)
-	tempk, tempd := StochF(tempRSIBuffer, tempRSIBuffer, tempRSIBuffer, inFastKPeriod, inFastDPeriod, inFastDMAType)
-
-	for i := startIdx; i < len(inReal); i++ {
-		outFastK[i] = tempk[i]
-		outFastD[i] = tempd[i]
+// func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
+//
+//		outFastK := make([]float64, len(inReal))
+//		outFastD := make([]float64, len(inReal))
+//
+//		lookbackSTOCHF := (inFastKPeriod - 1) + (inFastDPeriod - 1)
+//		lookbackTotal := inTimePeriod + lookbackSTOCHF
+//		startIdx := lookbackTotal
+//		tempRSIBuffer := Rsi(inReal, inTimePeriod)
+//		tempk, tempd := StochF(tempRSIBuffer, tempRSIBuffer, tempRSIBuffer, inFastKPeriod, inFastDPeriod, inFastDMAType)
+//
+//		for i := startIdx; i < len(inReal); i++ {
+//			outFastK[i] = tempk[i]
+//			outFastD[i] = tempd[i]
+//		}
+//
+//		return outFastK, outFastD
+//	}
+func MinValue(array []float64) float64 {
+	var minValue = array[0]
+	for i := 0; i < len(array); i++ {
+		if array[i] < minValue {
+			minValue = array[i]
+		}
 	}
+	return minValue
+}
+func MaxValue(array []float64) float64 {
+	var minValue = array[0]
+	for i := 0; i < len(array); i++ {
+		if array[i] > minValue {
+			minValue = array[i]
+		}
+	}
+	return minValue
+}
+func StochRSI(records []float64, rsiNum int, stochNum int, kPeriod int, dPeriod int) ([]float64, []float64) {
+	var rsi = Rsi(records, rsiNum)
+	var minRsi []float64
+	var maxRsi []float64
+	rsiLen := len(rsi)
+	for i := 0; i < rsiLen; i++ {
+		if i < stochNum*2-1 {
+			minRsi = append(minRsi, 0)
+			maxRsi = append(maxRsi, 0)
+		} else {
+			minV := MinValue(rsi[i-stochNum+1 : i+1])
+			maxV := MaxValue(rsi[i-stochNum+1 : i+1])
+			minRsi = append(minRsi, minV)
+			maxRsi = append(maxRsi, maxV)
+		}
+	}
+	var stoch []float64
+	for i := 0; i < rsiLen; i++ {
+		if maxRsi[i] == minRsi[i] {
+			stoch = append(stoch, 0)
+		} else {
+			stochValue := decimal.NewFromFloat(100).Mul((decimal.NewFromFloat(rsi[i]).Sub(decimal.NewFromFloat(minRsi[i]))).Div(decimal.NewFromFloat(maxRsi[i]).Sub(decimal.NewFromFloat(minRsi[i]))))
+			stoch = append(stoch, stochValue.InexactFloat64())
+		}
+	}
+	k := Ma(stoch, kPeriod, SMA)
+	d := Ma(k, dPeriod, SMA)
 
-	return outFastK, outFastD
+	return k, d
 }
 
-//Trix - 1-day Rate-Of-Change (ROC) of a Triple Smooth EMA
+// Trix - 1-day Rate-Of-Change (ROC) of a Triple Smooth EMA
 func Trix(inReal []float64, inTimePeriod int) []float64 {
 
 	tmpReal := Ema(inReal, inTimePeriod)
@@ -5868,9 +5917,9 @@ func Sum(inReal []float64, inTimePeriod int) []float64 {
 //
 // Returns highs, opens, closes and lows of the heikinashi candles (in this order).
 //
-//    NOTE: The number of Heikin-Ashi candles will always be one less than the number of provided candles, due to the fact
-//          that a previous candle is necessary to calculate the Heikin-Ashi candle, therefore the first provided candle is not considered
-//          as "current candle" in the algorithm, but only as "previous candle".
+//	NOTE: The number of Heikin-Ashi candles will always be one less than the number of provided candles, due to the fact
+//	      that a previous candle is necessary to calculate the Heikin-Ashi candle, therefore the first provided candle is not considered
+//	      as "current candle" in the algorithm, but only as "previous candle".
 func HeikinashiCandles(highs []float64, opens []float64, closes []float64, lows []float64) ([]float64, []float64, []float64, []float64) {
 	N := len(highs)
 
@@ -5893,8 +5942,8 @@ func HeikinashiCandles(highs []float64, opens []float64, closes []float64, lows 
 
 // Hlc3 returns the Hlc3 values
 //
-//     NOTE: Every Hlc item is defined as follows : (high + low + close) / 3
-//           It is used as AvgPrice candle.
+//	NOTE: Every Hlc item is defined as follows : (high + low + close) / 3
+//	      It is used as AvgPrice candle.
 func Hlc3(highs []float64, lows []float64, closes []float64) []float64 {
 	N := len(highs)
 	result := make([]float64, N)
@@ -5907,10 +5956,10 @@ func Hlc3(highs []float64, lows []float64, closes []float64) []float64 {
 
 // Crossover returns true if series1 is crossing over series2.
 //
-//    NOTE: Usually this is used with Media Average Series to check if it crosses for buy signals.
-//          It assumes first values are the most recent.
-//          The crossover function does not use most recent value, since usually it's not a complete candle.
-//          The second recent values and the previous are used, instead.
+//	NOTE: Usually this is used with Media Average Series to check if it crosses for buy signals.
+//	      It assumes first values are the most recent.
+//	      The crossover function does not use most recent value, since usually it's not a complete candle.
+//	      The second recent values and the previous are used, instead.
 func Crossover(series1 []float64, series2 []float64) bool {
 	if len(series1) < 3 || len(series2) < 3 {
 		return false
@@ -5923,7 +5972,7 @@ func Crossover(series1 []float64, series2 []float64) bool {
 
 // Crossunder returns true if series1 is crossing under series2.
 //
-//    NOTE: Usually this is used with Media Average Series to check if it crosses for sell signals.
+//	NOTE: Usually this is used with Media Average Series to check if it crosses for sell signals.
 func Crossunder(series1 []float64, series2 []float64) bool {
 	if len(series1) < 3 || len(series2) < 3 {
 		return false
@@ -5941,11 +5990,12 @@ func Crossunder(series1 []float64, series2 []float64) bool {
 // This avoid calling multiple times the exchange for multiple contexts.
 //
 // Example:
-//     To transform 15 minute candles in 30 minutes candles you have a grouping factor = 2
 //
-//     To transform 15 minute candles in 1 hour candles you have a grouping factor = 4
+//	To transform 15 minute candles in 30 minutes candles you have a grouping factor = 2
 //
-//     To transform 30 minute candles in 1 hour candles you have a grouping factor = 2
+//	To transform 15 minute candles in 1 hour candles you have a grouping factor = 4
+//
+//	To transform 30 minute candles in 1 hour candles you have a grouping factor = 2
 func GroupCandles(highs []float64, opens []float64, closes []float64, lows []float64, groupingFactor int) ([]float64, []float64, []float64, []float64, error) {
 	N := len(highs)
 	if groupingFactor == 0 {
