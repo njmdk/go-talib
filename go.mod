@@ -1,4 +1,4 @@
-module go-talib
+module github.com/njmdk/go-talib
 
 go 1.23.0
 
