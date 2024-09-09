@@ -8,7 +8,6 @@ package talib
 
 import (
 	"errors"
-	"github.com/shopspring/decimal"
 	"math"
 )
 
@@ -3051,71 +3050,23 @@ func StochF(inHigh []float64, inLow []float64, inClose []float64, inFastKPeriod 
 }
 
 // StochRsi - Stochastic Relative Strength Index
-// func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
-//
-//		outFastK := make([]float64, len(inReal))
-//		outFastD := make([]float64, len(inReal))
-//
-//		lookbackSTOCHF := (inFastKPeriod - 1) + (inFastDPeriod - 1)
-//		lookbackTotal := inTimePeriod + lookbackSTOCHF
-//		startIdx := lookbackTotal
-//		tempRSIBuffer := Rsi(inReal, inTimePeriod)
-//		tempk, tempd := StochF(tempRSIBuffer, tempRSIBuffer, tempRSIBuffer, inFastKPeriod, inFastDPeriod, inFastDMAType)
-//
-//		for i := startIdx; i < len(inReal); i++ {
-//			outFastK[i] = tempk[i]
-//			outFastD[i] = tempd[i]
-//		}
-//
-//		return outFastK, outFastD
-//	}
-func MinValue(array []float64) float64 {
-	var minValue = array[0]
-	for i := 0; i < len(array); i++ {
-		if array[i] < minValue {
-			minValue = array[i]
-		}
-	}
-	return minValue
-}
-func MaxValue(array []float64) float64 {
-	var minValue = array[0]
-	for i := 0; i < len(array); i++ {
-		if array[i] > minValue {
-			minValue = array[i]
-		}
-	}
-	return minValue
-}
-func StochRSI(records []float64, rsiNum int, stochNum int, kPeriod int, dPeriod int) ([]float64, []float64) {
-	var rsi = Rsi(records, rsiNum)
-	var minRsi []float64
-	var maxRsi []float64
-	rsiLen := len(rsi)
-	for i := 0; i < rsiLen; i++ {
-		if i < stochNum*2-1 {
-			minRsi = append(minRsi, 0)
-			maxRsi = append(maxRsi, 0)
-		} else {
-			minV := MinValue(rsi[i-stochNum+1 : i+1])
-			maxV := MaxValue(rsi[i-stochNum+1 : i+1])
-			minRsi = append(minRsi, minV)
-			maxRsi = append(maxRsi, maxV)
-		}
-	}
-	var stoch []float64
-	for i := 0; i < rsiLen; i++ {
-		if maxRsi[i] == minRsi[i] {
-			stoch = append(stoch, 0)
-		} else {
-			stochValue := decimal.NewFromFloat(100).Mul((decimal.NewFromFloat(rsi[i]).Sub(decimal.NewFromFloat(minRsi[i]))).Div(decimal.NewFromFloat(maxRsi[i]).Sub(decimal.NewFromFloat(minRsi[i]))))
-			stoch = append(stoch, stochValue.InexactFloat64())
-		}
-	}
-	k := Ma(stoch, kPeriod, SMA)
-	d := Ma(k, dPeriod, SMA)
+func StochRsi(inReal []float64, inTimePeriod int, inFastKPeriod int, inFastDPeriod int, inFastDMAType MaType) ([]float64, []float64) {
 
-	return k, d
+	outFastK := make([]float64, len(inReal))
+	outFastD := make([]float64, len(inReal))
+
+	lookbackSTOCHF := (inFastKPeriod - 1) + (inFastDPeriod - 1)
+	lookbackTotal := inTimePeriod + lookbackSTOCHF
+	startIdx := lookbackTotal
+	tempRSIBuffer := Rsi(inReal, inTimePeriod)
+	tempk, tempd := StochF(tempRSIBuffer, tempRSIBuffer, tempRSIBuffer, inFastKPeriod, inFastDPeriod, inFastDMAType)
+
+	for i := startIdx; i < len(inReal); i++ {
+		outFastK[i] = tempk[i]
+		outFastD[i] = tempd[i]
+	}
+
+	return outFastK, outFastD
 }
 
 // Trix - 1-day Rate-Of-Change (ROC) of a Triple Smooth EMA
